@@ -1,0 +1,85 @@
+Для реализации новых способов отправки сообщений в классе `MessageProcessor` можно использовать паттерн **интерфейс-адаптер** или **декоратор**.
+
+1. **Паттерн интерфейс-адаптер.** Создайте новый интерфейс `MessageSender` с методами для отправки сообщений в различные мессенджеры. Затем реализуйте этот интерфейс для каждого нового способа отправки (Telegram, VK, Viber, WhatsApp, Голубиная Почта). В классе `MessageProcessor` замените методы `sendSms` и `sendEmail` на вызов соответствующего метода интерфейса `MessageSender`.
+
+2. **Паттерн декоратор.** Создайте класс-декоратор `MessageSenderDecorator`, который будет оборачивать реализацию существующего способа отправки и добавлять новый способ отправки. В классе `MessageProcessor` вызовите метод декоратора, который будет соответствовать нужному способу отправки.
+
+Пример реализации паттерна интерфейс-адаптер:
+
+```
+interface MessageSender {
+    send(Message message);
+}
+
+class SmsSender implements MessageSender {
+    // Реализация отправки SMS
+}
+
+class EmailSender implements MessageSender {
+    // Реализация отправки email
+}
+
+class TelegramSender implements MessageSender {
+    // Реализация отправки в Telegram
+}
+
+// Класс MessageProcessor
+public class MessageProcessor {
+    private final List<MessageSender> messageSenders;
+
+    public MessageProcessor(List<MessageSender> messageSenders) {
+        this.messageSenders = messageSenders;
+    }
+
+    public void process(Message message) {
+        saveMessage(message);
+        for (MessageSender sender : messageSenders) {
+            sender.send(message);
+        }
+    }
+}
+```
+
+Пример реализации паттерна декоратор:
+
+```
+class MessageSenderDecorator {
+    private final MessageSender delegate;
+
+    public MessageSenderDecorator(MessageSender delegate) {
+        this.delegate = delegate;
+    }
+
+    public void send(Message message) {
+        if (isTelegram(message)) {
+            sendTelegram(message);
+        } else if (isEmail(message)) {
+            sendEmail(message);
+        } else {
+            delegate.send(message);
+        }
+    }
+
+    private boolean isTelegram(Message message) {
+    }
+
+    private void sendTelegram(Message message) {
+    }
+
+    private boolean isEmail(Message message) {
+    }
+
+    private void sendEmail(Message message) {
+    }
+}
+
+// Класс MessageProcessor
+public class MessageProcessor {
+    public void process(Message message) {
+        MessageSenderDecorator decorator = new MessageSenderDecorator(this.smppSession);
+        decorator.send(message);
+    }
+}
+```
+
+В обоих случаях вы можете добавить новые способы отправки, создав новый класс, реализующий интерфейс `MessageSender` или обернув существующий способ отправки классом-декоратором.

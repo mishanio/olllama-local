@@ -1,0 +1,120 @@
+pulling manifest ⠇ ^Cmichael@nn-nb08:~/personal/olllama-local$ docker exec -it ollama ollama run llama3.1
+>>> Существует Клас MessageProcessor который обеспечивает сохрание и отправку сообщений Message.
+... Кдасс MessageProcessor содержит методы для определения сообщений isSms и isEmail. А так же метода для отправки sendSms и sendEmail
+... Методы isSms, isEmail, sendSms, sendEmail реализовывать не нужно
+... 
+... Заказчик хочет поддержать новые разные способы отправки: Telegram, VK, Viber, Watsapp, Голубиная Почта
+... Как нужно изменить код процессора и что бы можно было бы добавлять новые способы отправки при этом не меня код внутри process?
+... 
+... 
+... 
+... //
+... record Message(String address, Map<String, Object> payload) {}
+...  
+... @KafkaListener(topics = "${message-topic}")
+... public void listen(@Payload Message messageRecord) {
+...  messgeProcessor.process(messageRecord.getValue()
+... }
+...  
+... @AllArgsConstructor
+... public class MessageProcessor {
+...     private final Session smppSession;
+...     private final Session smtpSession;
+...     private final MessageDao messageDao;
+...  
+...     public void process(Message message) {
+...         saveMessage(message);
+...         if (isSms(message)) {
+...             sendSms(message);
+...         } else if (isEmail(message)) {
+...             sendEmail(message);
+...         }
+...     }
+...     private boolean isSms(Message message) { /**realisation ommited*/}
+...     private boolean isEmail(Message message) { /**realisation ommited*/}
+...     private void sendSms(Message message) { /**realisation ommited*/}
+...     private void sendEmail(Message message) { /**realisation ommited*/}
+...     private void saveMessage(Message message) { /**realisation ommited*/}
+... }
+Чтобы поддерживать новые способы отправки сообщений без изменения кода внутри `process()` метода, вы можете изменить класс `MessageProcessor` следующим образом:
+
+```java
+@AllArgsConstructor
+public class MessageProcessor {
+    private final Session smppSession;
+    private final Session smtpSession;
+    private final MessageDao messageDao;
+    
+    public void process(Message message) {
+        saveMessage(message);
+        send(message);
+    }
+    
+    private boolean isSms(Message message) { /**realisation ommited*/}
+    private boolean isEmail(Message message) { /**realisation ommited*/}
+    private void sendSms(Message message) { /**realisation ommited*/}
+    private void sendEmail(Message message) { /**realisation ommited*/}
+    private void saveMessage(Message message) { /**realisation ommited*/}
+    
+    public void send(Message message) {
+        if (isSms(message)) {
+            sendSms(message);
+        } else if (isEmail(message)) {
+            sendEmail(message);
+        } else {
+            throw new UnsupportedOperationException("Unsupported message type");
+        }
+    }
+}
+```
+
+В этом варианте создан отдельный метод `send()`, который вызывается внутри `process()`. В методе `send()` используется полиморфизм, чтобы поддерживать различные способы 
+отправки сообщений.
+
+Теперь вы можете расширять класс `MessageProcessor` для поддержки новых способов отправки сообщений. Например:
+
+```java
+public class TelegramSender {
+    public void send(Message message) {
+        // код для отправки сообщения по Telegram
+    }
+}
+
+public class VKSender {
+    public void send(Message message) {
+        // код для отправки сообщения по VK
+    }
+}
+```
+
+Затем вы можете создать экземпляры этих классов и передавать в метод `send()` внутри `MessageProcessor`:
+
+```java
+public class TelegramMessageProcessor extends MessageProcessor {
+    private final TelegramSender sender;
+    
+    public TelegramMessageProcessor(Session smppSession, Session smtpSession, MessageDao messageDao, TelegramSender sender) {
+        super(smppSession, smtpSession, messageDao);
+        this.sender = sender;
+    }
+    
+    @Override
+    public void send(Message message) {
+        sender.send(message);
+    }
+}
+```
+
+Используйте этот класс `TelegramMessageProcessor` для отправки сообщений по Telegram:
+
+```java
+@KafkaListener(topics = "${message-topic}")
+public void listen(@Payload Message messageRecord) {
+    new TelegramMessageProcessor(smppSession, smtpSession, messageDao, telegramSender).process(messageRecord.getValue());
+}
+```
+
+Этот подход позволяет поддерживать новые способы отправки сообщений без изменения кода внутри `process()` метода.
+
+>>> Send a message (/? for help)
+
